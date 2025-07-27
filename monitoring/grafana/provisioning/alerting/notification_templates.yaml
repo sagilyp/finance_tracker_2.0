@@ -1,0 +1,21 @@
+apiVersion: 1
+
+templates:
+  - name: telegram.message.v1
+    template: |
+      {{- $alert := index .Alerts 0 -}}
+      {{- if eq $alert.Status "firing" -}}
+        🔥 <b>Firing</b>
+      {{- else -}}
+        ✅ <b>Resolved</b>
+      {{- end }}\n
+      <b>Alert:</b> <code>{{ $alert.Labels.alertname }}</code>\n
+      <b>Severity:</b> {{ $alert.Labels.severity | toUpper }}\n
+      {{- if $alert.Annotations.summary }}
+        <b>Summary:</b> {{ $alert.Annotations.summary }}\n
+      {{- end }}
+      {{- if $alert.Annotations.description }}
+        <b>Description:</b> {{ $alert.Annotations.description }}\n
+      {{- end }}
+
+

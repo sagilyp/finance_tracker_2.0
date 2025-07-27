@@ -1,0 +1,164 @@
+openapi: 3.0.3
+info:
+  title: Finance Tracker API
+  version: "1.0.0"
+  description: >
+    API для регистрации, авторизации
+    и управления финансовыми транзакциями.
+servers:
+  - url: /api
+paths:
+  /register:
+    post:
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCredentials"
+      responses:
+        "200":
+          description: Успех регистрации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "401":
+          description: Ошибка (логин занят)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /login:
+    post:
+      summary: Авторизация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCredentials"
+      responses:
+        "200":
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Неверные учётные данные
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /transaction:
+    post:
+      summary: Создать новую транзакцию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionRequest"
+      responses:
+        "200":
+          description: Транзакция добавлена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+  /transactions:
+    get:
+      summary: Получить список транзакций
+      parameters:
+        - in: query
+          name: user_id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [income, expense]
+      responses:
+        "200":
+          description: Список транзакций
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  transactions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+  /transaction/{transaction_id}:
+    delete:
+      summary: Удалить транзакцию
+      parameters:
+        - in: path
+          name: transaction_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Успешно }
+        "400": { description: Ошибка удаления }
+  /user/{user_id}:
+    delete:
+      summary: Удалить пользователя и все транзакции
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Пользователь удалён }
+        "400": { description: Ошибка удаления }
+components:
+  schemas:
+    UserCredentials:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    RegisterResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        user_id: { type: integer }
+    LoginResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        user_id: { type: integer }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string }
+        error: { type: string }
+    TransactionRequest:
+      type: object
+      required: [user_id, type, category, amount]
+      properties:
+        user_id: { type: integer }
+        type:
+          type: string
+          enum: [income, expense]
+        category: { type: string }
+        amount: { type: number, format: float }
+    TransactionResponse:
+      type: object
+      properties:
+        status: { type: string }
+        transaction_id: { type: integer }
+    Transaction:
+      type: object
+      properties:
+        id: { type: integer }
+        category: { type: string }
+        amount: { type: number, format: float }
+        created_at: { type: string, format: date-time }

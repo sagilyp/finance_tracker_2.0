@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'api-gateway'
+    static_configs:
+      # api_gateway отдает метрики на порту 8001
+      - targets: ['api_gateway:8001']
+
+  - job_name: 'postgres-exporter'
+    static_configs:
+      # postgres-exporter отдает метрики на порту 9491
+      - targets: ['postgres_exporter:9187']

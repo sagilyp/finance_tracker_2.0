@@ -1,0 +1,19 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: telegram_bot_1
+    receivers:
+      - uid: telegram_bot_1
+        type: telegram
+        settings:
+          parseMode: "HTML"
+          chatid: "-1002761061348"
+          bottoken: "${TELEGRAM_BOT_TOKEN}"
+          disableLinkPreview: true
+          message: '{{ template "telegram.message.v1" . }}'
+        templates:
+          - telegram.message.v1 
+
+         
+

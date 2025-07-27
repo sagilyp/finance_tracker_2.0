@@ -1,0 +1,17 @@
+# monitoring/postgres_exporter/queries.yaml
+pg_transactions:
+  query: "SELECT sum(xact_commit) as total_commits, sum(xact_rollback) as total_rollbacks FROM pg_stat_database"
+  metrics:
+    - total_commits:
+        usage: "COUNTER"
+        description: "Total number of committed transactions"
+    - total_rollbacks:
+        usage: "COUNTER"
+        description: "Total number of rolled back transactions"
+
+pg_active_connections:
+  query: "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active'"
+  metrics:
+    - active_connections:
+        usage: "GAUGE"
+        description: "Number of active connections"

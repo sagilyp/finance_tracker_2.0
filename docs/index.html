@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Документация проекта Finance Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; max-width: 800px; }
+    h1, h2, h3 { color: #2c3e50; }
+    code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+    nav { margin-bottom: 2rem; }
+    nav a { margin-right: 1rem; color: #2980b9; text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    .image-container { text-align: center; margin: 2rem 0; }
+    .image-container img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+    .caption { font-size: 0.9em; color: #555; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#overview">Обзор</a>
+    <a href="#architecture">Архитектура</a>
+    <a href="#setup">Запуск</a>
+    <a href="#structure">Структура</a>
+    <a href="#api">API</a>
+    <a href="#monitoring">Мониторинг</a>
+    <a href="#testing">Тестирование</a>
+  </nav>
+
+  <h1 id="overview">Обзор</h1>
+  <p>Это распределённое приложение <strong>Finance Tracker</strong>, позволяющее регистрировать пользователей, создавать и просматривать финансовые транзакции (доходы/расходы), а также удалять аккаунт. Проект построен на микросервисной архитектуре: API Gateway, RabbitMQ, backend-сервисы, PostgreSQL, Frontend на статическом HTML+JS, а также системы мониторинга и тестирования.</p>
+
+  <h2 id="architecture">Архитектура</h2>
+  
+  <h3>Реализуемая система</h3>
+  <p>В данной лабораторной работе была реализована система, которая включает несколько компонентов:</p>
+  <ul>
+    <li><strong>API Gateway</strong>: интерфейс для взаимодействия с клиентами через HTTP-протокол.</li>
+    <li><strong>RabbitMQ</strong>: брокер сообщений, служащий для обмена данными между сервисами.</li>
+    <li><strong>Сервисы логики системы (бэкенд)</strong>: каждый сервис обрабатывает задачи регистрации, авторизации и работы с транзакциями.</li>
+    <li><strong>База данных</strong>: PostgreSQL для хранения данных пользователей и транзакций.</li>
+  </ul>
+
+  <h3>Основные реализованные задачи</h3>
+  <ol>
+    <li>Регистрация пользователей — добавление новых пользователей в систему.</li>
+    <li>Авторизация пользователей — проверка учётных данных при входе.</li>
+    <li>Управление транзакциями — добавление, получение и удаление транзакций.</li>
+    <li>Удаление пользователей — удаление аккаунта и связанных данных.</li>
+    <li>Визуализация данных — построение круговой диаграммы транзакций.</li>
+  </ol>
+
+  <h3>Стек технологий</h3>
+  <p>Для брокера сообщений был выбран RabbitMQ, для серверной логики — Python, база данных — PostgreSQL, контейнеризация — Docker.</p>
+
+  <h3>Обоснование выбора брокера сообщений</h3>
+  <p>RabbitMQ выбран за его надёжность, простоту внедрения и масштабируемость. Он поддерживает подтверждение доставки сообщений и обработку ошибок, что важно для критичных систем. RabbitMQ легче по ресурсам, чем Apache Kafka, и позволяет гибко настраивать маршрутизацию сообщений. В проекте реализована RPC-модель обмена сообщениями. Система может быть масштабирована добавлением дополнительных инстансов сервисов и кластеров RabbitMQ для отказоустойчивости и увеличения пропускной способности.</p>
+
+  <h3>Диаграмма архитектуры</h3>
+  <div class="image-container">
+    <img src="assets/images/arc.png" alt="Диаграмма архитектуры системы">
+    <p class="caption">Рис. 1: Архитектурная схема системы Finance Tracker</p>
+  </div>
+
+  <h3>Протоколы взаимодействия</h3>
+  <p>RabbitMQ использует протокол AMQP для обмена сообщениями между компонентами. HTTP используется между API Gateway и клиентами (JSON-запросы/ответы). SQL (psycopg2) используется для работы с PostgreSQL.</p>
+
+  <h3>Масштабирование системы</h3>
+  <p>Масштабирование обеспечивается за счёт брокера RabbitMQ и горизонтального добавления сервисов. Для повышения отказоустойчивости и пропускной способности можно настроить кластеры RabbitMQ и дублировать бэкенд-воркеры.</p>
+
+  <h2 id="setup">Запуск (Quick Start)</h2>
+  <ol>
+    <li>Склонируйте репозиторий и перейдите в корень проекта.</li>
+    <li>Убедитесь, что свободны порты: <code>80, 8080, 8089, 9090, 9187, 3000, 5672, 5432</code>.</li>
+    <li>Запустите:
+      <pre>docker-compose up --build</pre>
+    </li>
+    <li>Откройте в браузере:
+      <ul>
+        <li>Frontend: <code>http://localhost</code></li>
+        <li>Locust UI: <code>http://localhost:8089</code></li>
+        <li>Prometheus: <code>http://localhost:9090</code></li>
+        <li>Grafana: <code>http://localhost:3000</code> (admin/admin)</li>
+        <li>Документацию: <code>http://localhost/docs/index.html</code></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2 id="structure">Структура проекта</h2>
+  <pre>
+  ├── api_gateway/
+  │   ├── api_gateway.py
+  │   ├── Dockerfile
+  │   └── requirements.txt
+  ├── backend/
+  │   ├── server.py
+  │   ├── database.py
+  │   ├── Dockerfile
+  │   └── requirements.txt
+  ├── docs/
+  │   ├── assets/
+  │   │   └── images/
+  │   │       └── arc.png
+  │   └── index.html        # документация (этот файл)
+  ├── frontend/
+  ├── init.sql
+  ├── load_tester_ui/
+  ├── monitoring/
+  ├── nginx.conf
+  ├── docker-compose.yml
+  └── users.json
+  </pre>
+
+  <h2 id="api">REST API Endpoints</h2>
+  <ul>
+    <li><code>POST /api/register</code>: Регистрация пользователя</li>
+    <li><code>POST /api/login</code>: Авторизация</li>
+    <li><code>POST /api/transaction</code>: Создание транзакции</li>
+    <li><code>GET /api/transactions?user_id=&lt;id&gt;&type=&lt;income|expense&gt;</code>: Получение транзакций</li>
+    <li><code>DELETE /api/transaction/&lt;tx_id&gt;</code>: Удаление транзакции</li>
+    <li><code>DELETE /api/user/&lt;user_id&gt;</code>: Удаление пользователя</li>
+  </ul>
+
+  <h2 id="monitoring">Мониторинг и алерты</h2>
+  <p>Метрики собираются Prometheus, визуализируются в Grafana. Основные метрики:</p>
+  <ul>
+    <li>RPS и p99 latency для API Gateway</li>
+    <li>TPS и активные соединения PostgreSQL</li>
+    <li>Алерты по задержке и нагрузке на БД с уведомлениями в Telegram</li>
+  </ul>
+
+  <h2 id="testing">Нагрузочное тестирование</h2>
+  <ol>
+    <li>Откройте <code>http://localhost:8089</code></li>
+    <li>Задайте число пользователей и spawn rate</li>
+    <li>Запустите тест и анализируйте результаты</li>
+  </ol>
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+version: '3.8'
+
+networks:
+  dev:
+
+services:
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend:/usr/share/nginx/html
+      - ./docs:/usr/share/nginx/html/docs 
+    depends_on:
+      - api_gateway
+    networks:
+      - dev
+
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"  # Web UI
+      - "5672:5672"    # RabbitMQ Port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - dev
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  api_gateway:
+    build:
+      context: ./api_gateway
+    ports:
+      - "8000:8000"
+      - "8001:8001" 
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - dev
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      #RESPONSE_QUEUE: response_queue
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 0"]
+      #test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+
+  backend_1:
+    build:
+      context: ./backend
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DB_HOST=db
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    #ports:
+    #  - "8001:8001"
+    networks:
+      - dev
+
+  backend_2:
+    build:
+      context: ./backend
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DB_HOST=db
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    #ports:
+    #  - "8001:8001"
+    networks:
+      - dev
+
+  backend_3:
+    build:
+      context: ./backend
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DB_HOST=db
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    #ports:
+    #  - "8001:8001"
+    networks:
+      - dev
+
+
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: finance_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - dev
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d finance_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - dev
+    depends_on:
+      - api_gateway
+      - postgres_exporter
+
+  grafana:
+    # build:
+    #   context: .
+    #   dockerfile: monitoring/grafana/Dockerfile
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:Z
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - TELEGRAM_BOT_TOKEN=8211470497:AAEHwRCwlZluJPzGJ_OCOckMRJSFcumoBiE
+      - GF_LOG_LEVEL=debug
+      - GF_LOG_CONSOLE_LEVEL=debug
+      
+    networks:
+      - dev
+    depends_on:
+      - prometheus
+
+  postgres_exporter:
+    image: bitnami/postgres-exporter:0.15.0
+    container_name: postgres_exporter
+    ports:
+      - "9187:9187"
+    volumes:
+      - ./monitoring/postgres_exporter/postgres_exporter.yml:/etc/postgres_exporter/postgres_exporter.yml
+      - ./monitoring/postgres_exporter/queries.yml:/etc/queries.yaml
+    environment:
+      - DATA_SOURCE_NAME=postgresql://user:password@db:5432/finance_db?sslmode=disable
+      - PG_EXPORTER_EXTEND_QUERY_PATH=/etc/queries.yaml
+    networks:
+      - dev
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - "--extend.query-path=/etc/queries.yaml"
+
+
+  locust:
+    build:
+      context: ./load_tester_ui
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./users.json:/app/users.json
+    networks:
+      - dev
+    depends_on:
+      - nginx
+      - api_gateway
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger_ui
+    environment:
+      - SWAGGER_JSON=/openapi/openapi.yaml
+    volumes:
+      - ./docs/openapi.yaml:/openapi/openapi.yaml:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - dev
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.49
+    container_name: jaeger
+    ports:
+      - "6831:6831/udp"    # OTLP/Jaeger thrift for agents
+      - "6832:6832/udp"
+      - "16686:16686"      # Jaeger UI
+      - "14250:14250"      # gRPC collector
+    networks:
+      - dev
+
+volumes:
+  db_data:

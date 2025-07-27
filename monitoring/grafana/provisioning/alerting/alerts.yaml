@@ -1,0 +1,88 @@
+apiVersion: 1
+
+groups:
+  - name: AppAlerts
+    folder: 'Application Alerts'
+    interval: 30s
+
+    rules:
+      - alert: HighAPILatency
+        uid: highapilatency01
+        title: "High p99 Latency on /api/login"
+        for: 1m
+        labels:
+          severity: critical
+          alertname: HighAPILatency
+          grafana_org_id: "1"
+        annotations:
+          summary: "High p99 Latency on /api/login"
+          description: "API login latency p99 is {{ $values.B | printf \"%.2f\" }}s (threshold: 0.5s)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            model:
+              expr: |
+                histogram_quantile(0.99,
+                  sum by (le) (
+                    rate(http_request_latency_seconds_bucket{endpoint="/api/login"}[1m])
+                  )
+                )
+              interval: "15s"
+              datasource:
+                type: prometheus
+                uid: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              reducer: last
+              expression: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: "$B > 0.5"
+
+      - alert: HighDatabaseRPS
+        uid: highdbrps01
+        title: "High Database Transactions"
+        for: 1m
+        labels:
+          severity: warning
+          alertname: HighDatabaseRPS
+          grafana_org_id: "1"
+        annotations:
+          summary: "High Database Transactions"
+          description: "DB transaction rate: {{ $values.B | printf \"%.0f\" }} RPS (threshold: 100)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(
+                  rate(pg_transactions_total_commits[1m])
+                  + rate(pg_transactions_total_rollbacks[1m])
+                )
+              interval: "15s"
+              datasource:
+                type: prometheus
+                uid: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              reducer: last
+              expression: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: "$B > 100"

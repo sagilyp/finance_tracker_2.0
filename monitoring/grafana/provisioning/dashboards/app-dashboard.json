@@ -1,0 +1,34 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "API Gateway: RPS", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(rate(http_requests_total[2m])) by (endpoint)", "legendFormat": "{{endpoint}}" }]
+    },
+    {
+      "title": "API Gateway: p99 Latency", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "histogram_quantile(0.99, sum(rate(http_request_latency_seconds_bucket[2m])) by (le, endpoint))", "legendFormat": "{{endpoint}}" }],
+      "thresholds": [{ "value": 0.5, "op": "gt", "colorMode": "critical", "fill": true, "line": true, "yaxis": "left" }]
+    },
+    {
+      "title": "Database: Transactions per Second", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "rate(pg_transactions_total_commits[2m]) + rate(pg_transactions_total_rollbacks[2m])", "legendFormat": "transactions" }],
+       "thresholds": [{ "value": 100, "op": "gt", "colorMode": "critical", "fill": true, "line": true, "yaxis": "left" }]
+    },
+    {
+      "title": "Database: Active Connections", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "pg_active_connections_active_connections", "legendFormat": "active connections" }]
+    }
+  ],
+  "refresh": "10s",
+  "title": "App Monitoring Dashboard",
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "browser"
+}
