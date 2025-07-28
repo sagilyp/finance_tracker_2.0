@@ -32,7 +32,6 @@
   <p>Это распределённое приложение <strong>Finance Tracker</strong>, позволяющее регистрировать пользователей, создавать и просматривать финансовые транзакции (доходы/расходы), а также удалять аккаунт. Проект построен на микросервисной архитектуре: API Gateway, RabbitMQ, backend-сервисы, PostgreSQL, Frontend на статическом HTML+JS, а также системы мониторинга и тестирования.</p>
 
   <h2 id="architecture">Архитектура</h2>
-  
   <h3>Реализуемая система</h3>
   <p>В данной лабораторной работе была реализована система, которая включает несколько компонентов:</p>
   <ul>
@@ -42,7 +41,7 @@
     <li><strong>База данных</strong>: PostgreSQL для хранения данных пользователей и транзакций.</li>
   </ul>
 
-  <h3>Основные реализованные задачи</h3>
+  <h3>Основные задачи</h3>
   <ol>
     <li>Регистрация пользователей — добавление новых пользователей в систему.</li>
     <li>Авторизация пользователей — проверка учётных данных при входе.</li>
@@ -54,8 +53,8 @@
   <h3>Стек технологий</h3>
   <p>Для брокера сообщений был выбран RabbitMQ, для серверной логики — Python, база данных — PostgreSQL, контейнеризация — Docker.</p>
 
-  <h3>Обоснование выбора брокера сообщений</h3>
-  <p>RabbitMQ выбран за его надёжность, простоту внедрения и масштабируемость. Он поддерживает подтверждение доставки сообщений и обработку ошибок, что важно для критичных систем. RabbitMQ легче по ресурсам, чем Apache Kafka, и позволяет гибко настраивать маршрутизацию сообщений. В проекте реализована RPC-модель обмена сообщениями. Система может быть масштабирована добавлением дополнительных инстансов сервисов и кластеров RabbitMQ для отказоустойчивости и увеличения пропускной способности.</p>
+  <h3>Выбор брокера сообщений</h3>
+  <p>RabbitMQ выбран за его надёжность, простоту внедрения и масштабируемость. Он поддерживает подтверждение доставки сообщений и обработку ошибок. В проекте реализована RPC-модель обмена сообщениями. Система масштабируется добавлением инстансов сервисов и кластеров RabbitMQ.</p>
 
   <h3>Диаграмма архитектуры</h3>
   <div class="image-container">
@@ -63,29 +62,23 @@
     <p class="caption">Рис. 1: Архитектурная схема системы Finance Tracker</p>
   </div>
 
-  <h3>Протоколы взаимодействия</h3>
-  <p>RabbitMQ использует протокол AMQP для обмена сообщениями между компонентами. HTTP используется между API Gateway и клиентами (JSON-запросы/ответы). SQL (psycopg2) используется для работы с PostgreSQL.</p>
-
-  <h3>Масштабирование системы</h3>
-  <p>Масштабирование обеспечивается за счёт брокера RabbitMQ и горизонтального добавления сервисов. Для повышения отказоустойчивости и пропускной способности можно настроить кластеры RabbitMQ и дублировать бэкенд-воркеры.</p>
-
   <h2 id="setup">Запуск (Quick Start)</h2>
   <ol>
     <li>Склонируйте репозиторий и перейдите в корень проекта.</li>
     <li>Убедитесь, что свободны порты: <code>80, 8080, 8089, 9090, 9187, 3000, 5672, 5432</code>.</li>
-    <li>Запустите:
+    <li>Запустите сервисы:</li>
       <pre>docker-compose up --build</pre>
-    </li>
-    <li>Откройте в браузере:
+    <li>Откройте в браузере:</li>
       <ul>
-        <li>Frontend: <code>http://localhost</code></li>
-        <li>Locust UI: <code>http://localhost:8089</code></li>
-        <li>Prometheus: <code>http://localhost:9090</code></li>
-        <li>Grafana: <code>http://localhost:3000</code> (admin/admin)</li>
-        <li>Документацию: <code>http://localhost/docs/index.html</code></li>
+        <li>Frontend: <a href="http://84.252.130.226:8080">http://84.252.130.226:8080</a></li>
+        <li>Locust UI: <a href="http://84.252.130.226:8089">http://84.252.130.226:8089</a></li>
+        <li>Prometheus: <a href="http://84.252.130.226:9090">http://84.252.130.226:9090</a></li>
+        <li>Grafana: <a href="http://84.252.130.226:3000">http://84.252.130.226:3000</a> (admin/admin)</li>
+        <li>Документация: <a href="http://84.252.130.226/docs/index.html">http://84.252.130.226/docs/index.html</a></li>
+        <li>Swagger UI: <a href="http://84.252.130.226:8080/docs/index.html">http://84.252.130.226:8080/docs/index.html</a></li>
       </ul>
-    </li>
   </ol>
+  <p>Для тестового прогрева и генерации алертов в Telegram: в Locust выставьте <code>Number of users = 1000</code> и <code>Ramp up = 100</code>. Этого достаточно для срабатывания алертов.</p>
 
   <h2 id="structure">Структура проекта</h2>
   <pre>
@@ -115,9 +108,13 @@
   <h2 id="api">REST API Endpoints</h2>
   <ul>
     <li><code>POST /api/register</code>: Регистрация пользователя</li>
-    <li><code>POST /api/login</code>: Авторизация</li>
+    <li><code>POST /api/login</code>: Авторизация<br>
+        <em>В <code>api_gateway/api_gateway.py</code> есть флаг:</em>
+        <pre>ENABLE_LATENCY_HACK = True</pre>
+        При <code>True</code> в методе <code>do_POST</code> для <code>/api/login</code> вставляется <code>time.sleep(0.6)</code> (600 ms задержки).
+    </li>
     <li><code>POST /api/transaction</code>: Создание транзакции</li>
-    <li><code>GET /api/transactions?user_id=&lt;id&gt;&type=&lt;income|expense&gt;</code>: Получение транзакций</li>
+    <li><code>GET /api/transactions?user_id=&lt;id&gt;&amp;type=&lt;income|expense&gt;</code>: Получение транзакций</li>
     <li><code>DELETE /api/transaction/&lt;tx_id&gt;</code>: Удаление транзакции</li>
     <li><code>DELETE /api/user/&lt;user_id&gt;</code>: Удаление пользователя</li>
   </ul>
@@ -132,10 +129,17 @@
 
   <h2 id="testing">Нагрузочное тестирование</h2>
   <ol>
-    <li>Откройте <code>http://localhost:8089</code></li>
-    <li>Задайте число пользователей и spawn rate</li>
-    <li>Запустите тест и анализируйте результаты</li>
+    <li>Откройте <a href="http://84.252.130.226:8089">http://84.252.130.226:8089</a> (Locust UI).</li>
+    <li>Задайте <code>Number of users = 1000</code> и <code>Ramp up = 100</code>.</li>
+    <li>Запустите тест и анализируйте результаты.</li>
   </ol>
+
+  <h2 id="links">Полезные ссылки</h2>
+  <ul>
+    <li>Сайт: <a href="http://84.252.130.226:8080">http://84.252.130.226:8080</a></li>
+    <li>Telegram-канал: <a href="https://t.me/helloMyCitty">t.me/helloMyCitty</a></li>
+    <li>Исходный код: <a href="https://github.com/sagilyp/finance_tracker_2.0">GitHub</a></li>
+  </ul>
 
 </body>
 </html>
