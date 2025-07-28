@@ -39,13 +39,19 @@ def register_callback(ch, method, properties, body):
     username = message['username']
     password = message['password']
     response = {}
-    try:
-        user_id = database.create_user(username, password)
+    user_id = None
+    for i in range(5):
+        try:
+            new_user_id = database.create_user(username, password)
+            if user_id is None:
+                user_id = new_user_id  # Сохраняем только первый успешный
+            print(f"[{i+1}/5] User {username} registered with ID {new_user_id}")
+        except Exception as e:
+            print(f"[{i+1}/5] Duplicate or error registering {username}: {e}")
+    if user_id:
         response = {'status': 'success', 'user_id': user_id}
-        print(f"User {username} registered with ID {user_id}.")
-    except Exception as e:
-        response = {'status': 'failure', 'error': str(e)}
-        print(f"Registration failed: {e}")
+    else:
+        response = {'status': 'failure', 'error': 'All 5 attempts failed'}
     respond(ch, properties, response)
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
