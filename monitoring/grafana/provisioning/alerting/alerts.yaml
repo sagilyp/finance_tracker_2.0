@@ -3,84 +3,119 @@ apiVersion: 1
 groups:
   - name: AppAlerts
     folder: 'Application Alerts'
-    interval: 30s
+    interval: 20s
 
     rules:
       - alert: HighAPILatency
         uid: highapilatency01
-        title: "High p99 Latency on /api/login"
-        for: 1m
+        title: "🚨 p99 Latency /api/login > 0.5s"
+        for: 0s
+        noDataState: OK
+        executionErrorState: OK
+
         labels:
           severity: critical
           alertname: HighAPILatency
           grafana_org_id: "1"
+
         annotations:
-          summary: "High p99 Latency on /api/login"
-          description: "API login latency p99 is {{ $values.B | printf \"%.2f\" }}s (threshold: 0.5s)"
+          summary: "p99 /api/login = {{ $values.B | printf \"%.2f\" }}s (>0.5s)"
+          description: |
+            **Service:** API Gateway  
+            **Endpoint:** `/api/login`  
+            **Current p99:** {{ $values.B | printf \"%.2f\" }}s  
+            **Threshold:** 0.5s  
+
+        # смотрим на шаг C, где уже true/false
         condition: C
+
         data:
+          # Шаг A: считаем p99 (или 0, если совсем нет данных)
           - refId: A
             datasourceUid: prometheus
             model:
               expr: |
                 histogram_quantile(0.99,
                   sum by (le) (
-                    rate(http_request_latency_seconds_bucket{endpoint="/api/login"}[1m])
+                    rate(http_request_latency_seconds_bucket{endpoint="/api/login",method="POST"}[1m])
                   )
                 )
-              interval: "15s"
-              datasource:
-                type: prometheus
-                uid: prometheus
+                or vector(0)
+            interval: "20s"
+            datasource:
+              type: prometheus
+              uid: prometheus
             relativeTimeRange:
-              from: 600
-              to: 0
+              from: 60
+              to:   0
+
+          # Шаг B: сводим вектор A к одному числу — последнему
           - refId: B
             datasourceUid: __expr__
             model:
               type: reduce
               reducer: last
               expression: A
+              defaultValue: 0
+
+          # Шаг C: математический шаг, дающий булево true/false
           - refId: C
             datasourceUid: __expr__
             model:
               type: math
               expression: "$B > 0.5"
 
+
       - alert: HighDatabaseRPS
         uid: highdbrps01
-        title: "High Database Transactions"
-        for: 1m
+        title: "🚨 DB RPS > 100"
+        for: 0s
+        noDataState: OK
+        executionErrorState: OK
+
         labels:
           severity: warning
           alertname: HighDatabaseRPS
           grafana_org_id: "1"
+
         annotations:
-          summary: "High Database Transactions"
-          description: "DB transaction rate: {{ $values.B | printf \"%.0f\" }} RPS (threshold: 100)"
+          summary: "DB RPS = {{ $values.B | printf \"%.0f\" }} (>100)"
+          description: |
+            **Service:** PostgreSQL  
+            **Metric:** commits+rollbacks per second  
+            **Current RPS:** {{ $values.B | printf "%.0f" }}  
+            **Threshold:** 100 RPS  
+
         condition: C
+
         data:
+          # Шаг A: считаем RPS
           - refId: A
             datasourceUid: prometheus
             model:
               expr: |
                 sum(
-                  rate(pg_transactions_total_commits[1m])
-                  + rate(pg_transactions_total_rollbacks[1m])
+                  rate(pg_transactions_total_commits[1m]) +
+                  rate(pg_transactions_total_rollbacks[1m])
                 )
-              interval: "15s"
-              datasource:
-                type: prometheus
-                uid: prometheus
+            interval: "20s"
+            datasource:
+              type: prometheus
+              uid: prometheus
             relativeTimeRange:
-              from: 600
-              to: 0
+              from: 60
+              to:   0
+
+          # Шаг B: последний value из A
           - refId: B
             datasourceUid: __expr__
             model:
               type: reduce
               reducer: last
               expression: A
+              defaultValue: 0
+
+          # Шаг C: пороговая проверка
           - refId: C
             datasourceUid: __expr__
             model:

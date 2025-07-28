@@ -5,17 +5,30 @@ templates:
     template: |
       {{- $alert := index .Alerts 0 -}}
       {{- if eq $alert.Status "firing" -}}
-        🔥 <b>Firing</b>
+      🔥 <b>FIRING</b>
       {{- else -}}
-        ✅ <b>Resolved</b>
-      {{- end }}\n
-      <b>Alert:</b> <code>{{ $alert.Labels.alertname }}</code>\n
-      <b>Severity:</b> {{ $alert.Labels.severity | toUpper }}\n
-      {{- if $alert.Annotations.summary }}
-        <b>Summary:</b> {{ $alert.Annotations.summary }}\n
-      {{- end }}
-      {{- if $alert.Annotations.description }}
-        <b>Description:</b> {{ $alert.Annotations.description }}\n
+      ✅ <b>RESOLVED</b>
       {{- end }}
 
+      <b>Alert:</b> <code>{{ $alert.Labels.alertname }}</code>
+      <b>Severity:</b> {{ $alert.Labels.severity | toUpper }}
 
+      {{- /* Получаем «сырое» значение p99 или RPS */ -}}
+      {{- $raw := index $alert.Values "B" -}}
+      {{- $disp := "N/A" -}}
+      {{- if and $raw (ne $raw 0) -}}
+        {{- $disp = printf "%.2f" $raw -}}
+      {{- end }}
+
+      {{- /* Ветка для HighAPILatency */ -}}
+      {{- if eq $alert.Labels.alertname "HighAPILatency" -}}
+      <b>Service:</b> API Gateway
+      <b>Endpoint:</b> /api/login
+      <b>p99 Latency:</b> {{ $disp }}s (threshold: 0.50s)
+
+      {{- /* Ветка для HighDatabaseRPS */ -}}
+      {{- else if eq $alert.Labels.alertname "HighDatabaseRPS" -}}
+      <b>Service:</b> PostgreSQL
+      <b>Metric:</b> commits+rollbacks RPS
+      <b>RPS:</b> {{ printf "%.0f" $raw }} (threshold: 100)
+      {{- end }}
